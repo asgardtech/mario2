@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import { useInput } from "../Input";
+import { Player } from "../Player";
 
 export function GameContainer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
+  const playerRef = useRef<Player | null>(null);
+  const keysRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -12,18 +15,39 @@ export function GameContainer() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Create player instance
+    playerRef.current = new Player(canvas.width, canvas.height);
+
+    // Setup input handling
+    useInput(keysRef);
+
     let lastTime = performance.now();
     const loop = (time: number) => {
-      const delta = time - lastTime;
+      const delta = (time - lastTime) / 1000;
       lastTime = time;
-      // Clear canvas and draw placeholder background
+
+      const p = playerRef.current;
+      if (p) {
+        p.update(delta, keysRef.current);
+      }
+
+      // Clear canvas and draw background
       ctx.fillStyle = "#111";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      // Simple demo: increment score over time
-      setScore((s) => s + delta / 1000);
+
+      // Draw player
+      if (p) {
+        p.draw(ctx);
+      }
+
+      // Update score over time (10 points per second)
+      setScore((s) => s + delta * 10);
+
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+
+    return () => {};
   }, []);
 
   return (
